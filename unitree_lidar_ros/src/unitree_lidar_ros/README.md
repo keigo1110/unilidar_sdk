@@ -73,6 +73,13 @@ source devel/setup.bash
 roslaunch unitree_lidar_ros run.launch
 ```
 
+## Run(without_rviz)
+Then you need to source this ROS packege environment and then directly run the launch file:
+```
+source devel/setup.bash
+roslaunch unitree_lidar_ros run_without_rviz.launch.launch
+```
+
 In the Rviz window, you will see our lidar pointcloud like this:
 
 ![img](./docs/cloud.png)
