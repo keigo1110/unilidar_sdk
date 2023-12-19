@@ -59,3 +59,6 @@ set(EXTRA_LIBS
 
 add_executable(unitree_lidar_ros_node src/unitree_lidar_ros_node.cpp)
 target_link_libraries(unitree_lidar_ros_node ${EXTRA_LIBS})
+
+add_executable(unitree_lidar_ros_node_without_rviz src/unitree_lidar_ros_node_without_rviz.cpp)
+target_link_libraries(unitree_lidar_ros_node_without_rviz ${EXTRA_LIBS})

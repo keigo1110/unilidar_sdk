@@ -91,6 +91,8 @@ protected:
   std::string local_ip_;
   int lidar_port_;
   std::string lidar_ip_;
+  
+  std::deque<sensor_msgs::PointCloud2> cloudQueue_; //キュー
 
 public:
 
@@ -173,9 +175,42 @@ public:
       return true;
     }
     else if (result == POINTCLOUD){
-      auto &cloud = lsdk_->getCloud();
-      transformUnitreeCloudToPCL(cloud, cloudOut);
-      publishCloud(&pub_pointcloud_raw_, cloudOut, ros::Time::now().fromSec(cloud.stamp), cloud_frame_);
+      auto &cloud = lsdk_->getCloud(); //ポイントクラウドデータを取得
+      transformUnitreeCloudToPCL(cloud, cloudOut); //PCl形式に変換
+      //sensor_msgs::PointCloud2 publishedCloud = publishCloud(&pub_pointcloud_raw_, cloudOut, ros::Time::now().fromSec(cloud.stamp), cloud_frame_); //ポイントクラウドデータを公開
+      
+      // PCLポイントクラウドをROSメッセージに変換
+      sensor_msgs::PointCloud2 publishedCloud;
+      pcl::toROSMsg(*cloudOut, publishedCloud);
+      publishedCloud.header.stamp = ros::Time::now().fromSec(cloud.stamp);
+      publishedCloud.header.frame_id = cloud_frame_;
+      
+      //キューに新しいポイントクラウドを追加
+      cloudQueue_.push_back(publishedCloud);
+      
+      //キューのサイズがmaxを超えた場合、最も古いものを削除
+      if(cloudQueue_.size() > 10) {
+      	while(cloudQueue_.size() > 10) {
+      	  cloudQueue_.pop_front();
+      	}
+      }
+      
+      
+      //キュー内のすべてのポイントクラウドを同時に公開
+      pcl::PointCloud<PointType>::Ptr combinedCloud(new pcl::PointCloud<PointType>());
+      for (const auto& cloudMsg : cloudQueue_) {
+        pcl::PointCloud<PointType> tempCloud;
+        pcl::fromROSMsg(cloudMsg, tempCloud);
+        *combinedCloud += tempCloud;
+      }
+
+      // 組み合わせたPCLポイントクラウドをROSメッセージ形式に変換して公開
+      sensor_msgs::PointCloud2 combinedCloudMsg;
+      pcl::toROSMsg(*combinedCloud, combinedCloudMsg);
+      combinedCloudMsg.header.stamp = ros::Time::now();  // 適切なタイムスタンプを設定
+      combinedCloudMsg.header.frame_id = cloud_frame_;   // 適切なフレームIDを設定
+      pub_pointcloud_raw_.publish(combinedCloudMsg);
+      
       
       return true;
     }else{
